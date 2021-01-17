@@ -78,9 +78,14 @@ fn main() {
         }
 
         // Update the previous address
+        let data = ip_address.as_bytes();
         previuos_address_file
-            .write(&ip_address.as_bytes())
+            .write(data)
             .expect("Failed to write the previous address.");
+
+        previuos_address_file
+            .set_len(data.len() as u64)
+            .expect("Failed to update the len of the file");
     }
 
     let client = reqwest::blocking::Client::builder()
