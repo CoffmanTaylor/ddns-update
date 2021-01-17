@@ -1,7 +1,10 @@
 use pnet::datalink::interfaces;
 use serde::{Deserialize, Serialize};
-use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufReader, Write};
+use std::{
+    fs::{File, OpenOptions},
+    io::Read,
+};
 
 static APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
@@ -54,6 +57,31 @@ fn main() {
 
     // format the ip address
     let ip_address = ip_address.network().to_string();
+
+    // If the previuos address set to the DNS is the same as the current one,
+    // there is no need to resend the address.
+    let previuos_address_file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .open("/tmp/gddns.last");
+
+    if let Ok(mut previuos_address_file) = previuos_address_file {
+        let mut previous_address = String::new();
+        previuos_address_file
+            .read_to_string(&mut previous_address)
+            .expect("Failed to readin previous address");
+
+        // Check if the last address is the same as the current one.
+        if previous_address == ip_address {
+            return;
+        }
+
+        // Update the previous address
+        previuos_address_file
+            .write(&ip_address.as_bytes())
+            .expect("Failed to write the previous address.");
+    }
 
     let client = reqwest::blocking::Client::builder()
         .user_agent(APP_USER_AGENT)
